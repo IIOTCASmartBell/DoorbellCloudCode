@@ -124,6 +124,7 @@ try:
     create_greenlist()
     
     #the loop which is the 'listener' for when an 
+    #image is being added to the storage and linked to the db
     while True:
         #print("Baszd meg")
         bucket_list = bucket.list_blobs(prefix="DEFAULT/")
