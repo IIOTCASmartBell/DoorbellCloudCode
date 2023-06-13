@@ -67,7 +67,7 @@ try:
     db2 = firebase.database()
 
     #Create and connect to the firebase app using firebase_admin
-    cred = firebase_admin.credentials.Certificate(os.path.join(os.getcwd(), 'key2.json'))
+    cred = firebase_admin.credentials.Certificate(os.path.join(os.getcwd(), 'key.json'))
     default_app = firebase_admin.initialize_app(cred, config)
     bucket = storage.bucket()
     bucket_list = bucket.list_blobs(prefix="DEFAULT/")
@@ -102,8 +102,8 @@ try:
                             default_encodings.append(image_encoding)
                             default_names.append(child["person_name"])
                         except: 
-                            pass                       
-    
+                            pass                  
+            
     def create_greenlist():
         children = db2.child("lists").child("greenlist").get().val()
         if type(children) == collections.OrderedDict:
@@ -137,9 +137,10 @@ try:
 
             try:        
                 #try to retreive the faces from the image in order to perform the face recognition      
-                unknown_image = face_recognition.load_image_file(os.path.join(os.getcwd(), "greenlist", "latest.jpg"))
+                unknown_image = face_recognition.load_image_file(os.path.join(os.getcwd(), "latest", "latest.jpg"))
                 face_locations = face_recognition.face_locations(unknown_image)
                 face_encodings = face_recognition.face_encodings(unknown_image, face_locations)
+
                 #update the lists in order to make sure they are at the newest version
                 create_blacklist()
                 create_default()
@@ -149,38 +150,49 @@ try:
                 for face_encoding in face_encodings:
                     # See if the face is a match for the known face(s)
                     matches = face_recognition.compare_faces(blacklist_encodings, face_encoding)
-                    name = "Unknown person"
-                    # If a match was found in known_face_encodings, just use the first one.
-                    if True in matches:
-                        first_match_index = matches.index(True)
-                        name = blacklist_names[first_match_index]
-                        sendPush("A new visitor", f"{name} was at the front door! Access instantly denied", tokens, {'title': "A new visitor", 'message': f"{name} was at the front door! Access instantly denied", 'label': 'blacklist'})
-                        break
+                    #print('checking with blacklist')
+                    name = "Unknown"
+                    try:
+                        if True in matches:
+                            first_match_index = matches.index(True)
+                            name = blacklist_names[first_match_index]
+                            sendPush("A new visitor", f"{name} was at the front door! Access instantly denied", tokens, {'title': "A new visitor", 'message': f"{name} was at the front door! Access instantly denied", 'label': 'blacklist'})
+                            break
+                    except:
+                        pass
 
                     #if at least a person is in the default list, you may approve or deny access
-                    # See if the face is a match for the known face(s)
-                    matches = face_recognition.compare_faces(default_encodings, face_encoding)
+                    #remove the last person from the default list, since that is the last person added to the db, and it appears as latest:)
+                    default_encodings = default_encodings[ : -1]
+                    default_names = default_names[ : -1] 
+                    #print('checking with default list') 
 
-                    # If a match was found in known_face_encodings, just use the first one.
-                    if True in matches:
-                        #first_match_index = matches.index(True)
-                        name = default_names[first_match_index]
-                        sendPush("A new visitor", f"{name} is at the front door!", tokens, {'title': "A new visitor", 'message': f"{name} is at the front door!", 'label': 'default'})
-                        break
-
+                    try:
+                        matches = face_recognition.compare_faces(default_encodings, face_encoding)
+                        if True in matches:
+                            #first_match_index = matches.index(True)
+                            name = default_names[first_match_index]
+                            sendPush("A new visitor", f"{name} is at the front door!", tokens, {'title': "A new visitor", 'message': f"{name} is at the front door!", 'label': 'default'})
+                            break
+                    except:
+                        pass
+                    
+                    #print('checking with greenlist')
                     #if at least a person is in the green list, ACCESS GRANTED
-                    # See if the face is a match for the known face(s)
-                    matches = face_recognition.compare_faces(greenlist_encodings, face_encoding)
-
-                    # If a match was found in known_face_encodings, just use the first one.
-                    if True in matches:
-                        first_match_index = matches.index(True)
-                        name = greenlist_names[first_match_index]
-                        sendPush("A new visitor", f"{name} was at the front door! Access instantly granted", tokens, {'title': "A new visitor", 'message': f"{name} was at the front door! Access instantly granted", 'label': 'greenlist'})
-                        break
-
+                    try:
+                        matches = face_recognition.compare_faces(greenlist_encodings, face_encoding)
+                        if True in matches:
+                            first_match_index = matches.index(True)
+                            name = greenlist_names[first_match_index]
+                            sendPush("A new visitor", f"{name} was at the front door! Access instantly granted", tokens, {'title': "A new visitor", 'message': f"{name} was at the front door! Access instantly granted", 'label': 'greenlist'})
+                            break
+                    except:
+                        pass
+                    
+                    #if the person cannot be found in any of the lists mentioned above, it is someone really new
+                    sendPush("A new visitor", 'Unknown is at the front door!', tokens, {'title': "A new visitor", 'message': 'Unknown is at the front door!', 'label': 'default'})
             except:
-                sendPush("A new visitor", 'Unknown person is at the front door!', tokens, {'title': "A new visitor", 'message': 'Unknown person is at the front door!', 'label': 'default'})
+                sendPush("A new visitor", 'Unknown is at the front door!', tokens, {'title': "A new visitor", 'message': 'Unknown is at the front door!', 'label': 'default'})
                 
         bucket_list_len = new_bucket_list_len
         
