@@ -94,9 +94,9 @@ try:
             if type(children) == collections.OrderedDict:
                 for key, child in children.items():
                     img_name = key + ".jpg"
-                    if img_name not in os.listdir("default"):
-                        urllib.request.urlretrieve(child["img_link"], os.path.join(os.getcwd(), "default", img_name))
+                    if img_name not in os.listdir("default"):          
                         try:
+                            urllib.request.urlretrieve(child["img_link"], os.path.join(os.getcwd(), "default", img_name))
                             image_to_encode = face_recognition.load_image_file(os.path.join(os.getcwd(), "default", img_name))
                             image_encoding = face_recognition.face_encodings(image_to_encode)[0]
                             default_encodings.append(image_encoding)
@@ -124,7 +124,6 @@ try:
     create_greenlist()
     
     #the loop which is the 'listener' for when an 
-    #image is being added to the storage and linked to the db
     while True:
         #print("Baszd meg")
         bucket_list = bucket.list_blobs(prefix="DEFAULT/")
@@ -161,7 +160,7 @@ try:
                             break
                     except:
                         pass
-
+                    
                     #if at least a person is in the default list, you may approve or deny access
                     #remove the last person from the default list, since that is the last person added to the db, and it appears as latest:)
                     default_encodings = default_encodings[ : -1]
@@ -191,8 +190,10 @@ try:
                         pass
                     
                     #if the person cannot be found in any of the lists mentioned above, it is someone really new
+                    #print('no known person found')
                     sendPush("A new visitor", 'Unknown is at the front door!', tokens, {'title': "A new visitor", 'message': 'Unknown is at the front door!', 'label': 'default'})
             except:
+
                 sendPush("A new visitor", 'Unknown is at the front door!', tokens, {'title': "A new visitor", 'message': 'Unknown is at the front door!', 'label': 'default'})
                 
         bucket_list_len = new_bucket_list_len
